@@ -23,8 +23,8 @@ public class MainActivity extends AppCompatActivity {
                 case R.id.navigation_history:
                     replaceTopLevelFragment(new HistoryFragment());
                     return true;
-                case R.id.navigation_notifications:
-                    replaceTopLevelFragment(new NotificationsFragment());
+                case R.id.navigation_recommendations:
+                    replaceTopLevelFragment(new RecommendationsFragment());
                     return true;
                 case R.id.navigation_settings:
                     replaceTopLevelFragment(new SettingsFragment());

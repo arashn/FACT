@@ -6,10 +6,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-public class NotificationsFragment extends Fragment {
+public class RecommendationsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.notifications_fragment, container, false);
+        return inflater.inflate(R.layout.recommendations_fragment, container, false);
     }
 }
