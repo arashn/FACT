@@ -8,7 +8,6 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
-import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,6 +41,16 @@ public class MainActivity extends AppCompatActivity {
 
         BottomNavigationView navigation = findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+
+        FragmentManager fragmentManager = getFragmentManager();
+        Fragment fragment = fragmentManager.findFragmentByTag("ROOT");
+        if (fragment == null) {
+            FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+            fragment = new HomeFragment();
+            fragmentTransaction.add(R.id.fragment_container, fragment, "ROOT");
+            fragmentTransaction.commit();
+        }
     }
 
     private void replaceTopLevelFragment(Fragment newFragment) {
