@@ -49,17 +49,16 @@ public class WelcomeActivity extends AppCompatActivity {
             startActivity(new Intent(this, MainActivity.class));
             finish();
         }
-
-        if (hasOAuthPermission()) {
-            requestRuntimePermissions();
-        }
     }
 
     /** Gets the {@link FitnessOptions} in order to check or request OAuth permission for the user. */
     private FitnessOptions getFitnessSignInOptions() {
         return FitnessOptions.builder()
+                .addDataType(DataType.TYPE_ACTIVITY_SAMPLES)
+                .addDataType(DataType.TYPE_ACTIVITY_SEGMENT)
                 .addDataType(DataType.TYPE_LOCATION_SAMPLE)
-                .addDataType(DataType.TYPE_CALORIES_EXPENDED).build();
+                .addDataType(DataType.TYPE_CALORIES_EXPENDED)
+                .addDataType(DataType.TYPE_NUTRITION, FitnessOptions.ACCESS_WRITE).build();
     }
 
     /** Checks if user's account has OAuth permission to Fitness API. */
