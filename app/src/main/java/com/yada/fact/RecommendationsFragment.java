@@ -2,15 +2,93 @@ package com.yada.fact;
 
 import android.app.Fragment;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.fitness.Fitness;
+import com.google.android.gms.fitness.data.Bucket;
+import com.google.android.gms.fitness.data.DataPoint;
+import com.google.android.gms.fitness.data.DataSet;
+import com.google.android.gms.fitness.data.DataType;
+import com.google.android.gms.fitness.data.Field;
+import com.google.android.gms.fitness.request.DataReadRequest;
+import com.google.android.gms.fitness.result.DataReadResponse;
+import com.google.android.gms.tasks.OnSuccessListener;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
+import static java.text.DateFormat.getTimeInstance;
+
 public class RecommendationsFragment extends Fragment {
+    private static final String TAG = "RecommendationsFragment";
+
+    public static final int GOAL_MAINTAIN_WEIGHT = 0;
+    public static final int GOAL_WEIGHT_GAIN = 1;
+    public static final int GOAL_WEIGHT_LOSS = 2;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.recommendations_fragment, container, false);
+        View view = inflater.inflate(R.layout.recommendations_fragment, container, false);
+
+        getDailyCalorieIntake();
+
+        return view;
+    }
+
+    private void getDailyCalorieIntake() {
+        final Calendar cal = Calendar.getInstance();
+        Date now = new Date();
+        cal.setTime(now);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        cal.add(Calendar.MILLISECOND, -1);
+        long endTime = cal.getTimeInMillis();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        cal.add(Calendar.WEEK_OF_YEAR, -4);
+        long startTime = cal.getTimeInMillis();
+
+        DateFormat dateFormat = SimpleDateFormat.getDateTimeInstance();
+        Log.i(TAG, "Range Start: " + dateFormat.format(startTime));
+        Log.i(TAG, "Range End: " + dateFormat.format(endTime));
+
+        DataReadRequest readRequest = new DataReadRequest.Builder()
+                .aggregate(DataType.TYPE_CALORIES_EXPENDED, DataType.AGGREGATE_CALORIES_EXPENDED)
+                .bucketByTime(1, TimeUnit.DAYS)
+                .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                .build();
+
+        Fitness.getHistoryClient(getActivity(), GoogleSignIn.getLastSignedInAccount(getActivity()))
+                .readData(readRequest).addOnSuccessListener(new OnSuccessListener<DataReadResponse>() {
+            @Override
+            public void onSuccess(DataReadResponse dataReadResponse) {
+                Log.d(TAG, "Got response");
+                Log.d(TAG, "Number of buckets: " + dataReadResponse.getBuckets().size());
+                Log.d(TAG, "Number of datasets: " + dataReadResponse.getDataSets().size());
+                cal.setTime(new Date());
+                cal.set(Calendar.HOUR_OF_DAY, 0);
+                cal.set(Calendar.MINUTE, 0);
+                cal.set(Calendar.SECOND, 0);
+                cal.set(Calendar.MILLISECOND, 0);
+                cal.add(Calendar.WEEK_OF_YEAR, -1);
+                for (Bucket bucket : dataReadResponse.getBuckets()) {
+                    Log.d(TAG, "Bucket has " + bucket.getDataSets().size() + " datasets total");
+                    dumpDataSet(bucket.getDataSet(DataType.AGGREGATE_CALORIES_EXPENDED));
+                }
+            }
+        });
     }
 
     public double calculateNextMealCalories(){
@@ -61,7 +139,21 @@ public class RecommendationsFragment extends Fragment {
 
     }
 
+    private static void dumpDataSet(DataSet dataSet) {
+        Log.i(TAG, "Data returned for Data type: " + dataSet.getDataType().getName());
+        DateFormat dateFormat = SimpleDateFormat.getDateTimeInstance();
 
+        Log.d(TAG, "Dataset has " + dataSet.getDataPoints().size() + " datapoints");
+        for (DataPoint dp : dataSet.getDataPoints()) {
+            Log.i(TAG, "Data point:");
+            Log.i(TAG, "\tType: " + dp.getDataType().getName());
+            Log.i(TAG, "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS)));
+            Log.i(TAG, "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS)));
+            for (Field field : dp.getDataType().getFields()) {
+                Log.i(TAG, "\tField: " + field.getName() + " Value: " + dp.getValue(field));
+            }
+        }
+    }
 }
 
 

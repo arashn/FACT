@@ -1,6 +1,7 @@
 package com.yada.fact;
 
 import android.app.Fragment;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -51,7 +52,7 @@ public class HomeFragment extends Fragment {
         mAddMealFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Calendar cal = Calendar.getInstance();
+                /*Calendar cal = Calendar.getInstance();
                 cal.setTime(new Date());
                 long startTime = cal.getTimeInMillis();
                 cal.add(Calendar.MINUTE, 1);
@@ -90,7 +91,9 @@ public class HomeFragment extends Fragment {
                         Log.e(TAG, "Failed to add banana");
                         Log.d(TAG, e.getMessage());
                     }
-                });
+                });*/
+
+                startActivity(new Intent(getActivity(), CaptureActivity.class));
             }
         });
 
