@@ -60,7 +60,7 @@ public class RecommendationsFragment extends Fragment {
         cal.add(Calendar.WEEK_OF_YEAR, -4);
         long startTime = cal.getTimeInMillis();
 
-        DateFormat dateFormat = SimpleDateFormat.getDateTimeInstance();
+        final DateFormat dateFormat = SimpleDateFormat.getDateTimeInstance();
         Log.i(TAG, "Range Start: " + dateFormat.format(startTime));
         Log.i(TAG, "Range End: " + dateFormat.format(endTime));
 
@@ -77,16 +77,98 @@ public class RecommendationsFragment extends Fragment {
                 Log.d(TAG, "Got response");
                 Log.d(TAG, "Number of buckets: " + dataReadResponse.getBuckets().size());
                 Log.d(TAG, "Number of datasets: " + dataReadResponse.getDataSets().size());
+                float avgCaloriesBurned = 0.0f;
+                boolean foundDataPoint = false;
                 cal.setTime(new Date());
+                for (int i = 1; i <= 4; i++) {
+                    foundDataPoint = false;
+                    cal.set(Calendar.HOUR_OF_DAY, 0);
+                    cal.set(Calendar.MINUTE, 0);
+                    cal.set(Calendar.SECOND, 0);
+                    cal.set(Calendar.MILLISECOND, 0);
+                    cal.add(Calendar.WEEK_OF_YEAR, -1);
+                    long startTime = cal.getTimeInMillis();
+                    cal.add(Calendar.DAY_OF_MONTH, 1);
+                    cal.add(Calendar.MILLISECOND, -1);
+                    long endTime = cal.getTimeInMillis();
+                    Log.d(TAG, "Day " + i + " start: " + dateFormat.format(startTime));
+                    Log.d(TAG, "Day " + i + " end: " + dateFormat.format(endTime));
+                    for (Bucket bucket : dataReadResponse.getBuckets()) {
+                        DataSet dataSet = bucket.getDataSet(DataType.AGGREGATE_CALORIES_EXPENDED);
+                        for (DataPoint dataPoint : dataSet.getDataPoints()) {
+                            if (dataPoint.getStartTime(TimeUnit.MILLISECONDS) >= startTime
+                                    && dataPoint.getStartTime(TimeUnit.MILLISECONDS) <= endTime) {
+                                Log.i(TAG, "Data point:");
+                                Log.i(TAG, "\tType: " + dataPoint.getDataType().getName());
+                                Log.i(TAG, "\tStart: " + dateFormat.format(dataPoint.getStartTime(TimeUnit.MILLISECONDS)));
+                                Log.i(TAG, "\tEnd: " + dateFormat.format(dataPoint.getEndTime(TimeUnit.MILLISECONDS)));
+                                for (Field field : dataPoint.getDataType().getFields()) {
+                                    Log.i(TAG, "\tField: " + field.getName() + " Value: " + dataPoint.getValue(Field.FIELD_CALORIES));
+                                }
+                                avgCaloriesBurned = ((avgCaloriesBurned * (i - 1)) + dataPoint.getValue(Field.FIELD_CALORIES).asFloat()) / i;
+                                foundDataPoint = true;
+                                break;
+                            }
+                        }
+                        if (foundDataPoint) break;
+                        //dumpDataSet(bucket.getDataSet(DataType.AGGREGATE_CALORIES_EXPENDED));
+                    }
+                }
+                Log.d(TAG, "Average calories burned: " + avgCaloriesBurned);
+
+                int numPounds = -1;
+                int timePeriod = 7;
+
+                final float dailyCalories = ((numPounds * 3500) / timePeriod) + avgCaloriesBurned;
+
+                Log.d(TAG, "Number of calories to consume today: " + dailyCalories);
+
+                cal.setTime(new Date());
+                long endTime = cal.getTimeInMillis();
                 cal.set(Calendar.HOUR_OF_DAY, 0);
                 cal.set(Calendar.MINUTE, 0);
                 cal.set(Calendar.SECOND, 0);
                 cal.set(Calendar.MILLISECOND, 0);
-                cal.add(Calendar.WEEK_OF_YEAR, -1);
-                for (Bucket bucket : dataReadResponse.getBuckets()) {
-                    Log.d(TAG, "Bucket has " + bucket.getDataSets().size() + " datasets total");
-                    dumpDataSet(bucket.getDataSet(DataType.AGGREGATE_CALORIES_EXPENDED));
-                }
+                long startTime = cal.getTimeInMillis();
+
+                DataReadRequest foodReadRequest = new DataReadRequest.Builder()
+                        .read(DataType.TYPE_NUTRITION)
+                        .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                        .build();
+
+                Fitness.getHistoryClient(getActivity(), GoogleSignIn.getLastSignedInAccount(getActivity()))
+                        .readData(foodReadRequest).addOnSuccessListener(new OnSuccessListener<DataReadResponse>() {
+                    @Override
+                    public void onSuccess(DataReadResponse dataReadResponse) {
+                        float numCaloriesConsumed = 0.0f;
+                        int numMealsRemaining;
+                        for (DataSet dataSet : dataReadResponse.getDataSets()) {
+                            for (DataPoint dataPoint : dataSet.getDataPoints()) {
+                                numCaloriesConsumed += dataPoint.getValue(Field.FIELD_NUTRIENTS).getKeyValue(Field.NUTRIENT_CALORIES);
+                            }
+                        }
+                        Log.d(TAG, "Number of calories consumed today: " + numCaloriesConsumed);
+
+                        cal.setTime(new Date());
+                        int hour = cal.get(Calendar.HOUR_OF_DAY);
+                        Log.d(TAG, "Hour of day: " + hour);
+                        if (hour < 12) {
+                            numMealsRemaining = 3;
+                        }
+                        else if (hour >= 12 && hour < 17) {
+                            numMealsRemaining = 2;
+                        }
+                        else {
+                            numMealsRemaining = 1;
+                        }
+
+                        Log.d(TAG, "Number of meals remaining: " + numMealsRemaining);
+
+                        float nextMealCalories = dailyCalories - numCaloriesConsumed / numMealsRemaining;
+
+                        Log.d(TAG, "Next meal calories: " + nextMealCalories);
+                    }
+                });
             }
         });
     }
