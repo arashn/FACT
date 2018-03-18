@@ -1,11 +1,23 @@
 package com.yada.fact;
 
+import android.Manifest;
 import android.app.Fragment;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.DividerItemDecoration;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.fitness.Fitness;
@@ -16,15 +28,34 @@ import com.google.android.gms.fitness.data.DataType;
 import com.google.android.gms.fitness.data.Field;
 import com.google.android.gms.fitness.request.DataReadRequest;
 import com.google.android.gms.fitness.result.DataReadResponse;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.maps.GeoApiContext;
+import com.google.maps.PlacesApi;
+import com.google.maps.model.LatLng;
+import com.google.maps.model.PlacesSearchResult;
+import com.google.maps.model.RankBy;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.Transformer;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
-import static java.text.DateFormat.getTimeInstance;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RecommendationsFragment extends Fragment {
     private static final String TAG = "RecommendationsFragment";
@@ -33,10 +64,37 @@ public class RecommendationsFragment extends Fragment {
     public static final int GOAL_WEIGHT_GAIN = 1;
     public static final int GOAL_WEIGHT_LOSS = 2;
 
+    private FusedLocationProviderClient mFusedLocationClient;
+    private GeoApiContext mGeoApi;
+
+    private RecyclerView mRecyclerView;
+    private RecommendationsAdapter mAdapter;
+    private LinearLayout mContent;
+    private ProgressBar mProgressBar;
+    private TextView mHeader, mDailyCalories, mNextMealCaloriesDesc, mNextMealCalories, mNoMoreFood;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.recommendations_fragment, container, false);
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        mGeoApi = new GeoApiContext.Builder().apiKey("AIzaSyAdZiz-qiclq7TCGLPavHXVqCIkpKACZto").build();
+
+        mContent = view.findViewById(R.id.recommendations_content);
+        mProgressBar = view.findViewById(R.id.recommendations_progress_bar);
+        mRecyclerView = view.findViewById(R.id.menu_items_recycler_view);
+        mHeader = view.findViewById(R.id.recommendations_header);
+        mDailyCalories = view.findViewById(R.id.daily_calories);
+        mNextMealCaloriesDesc = view.findViewById(R.id.next_meal_calories_desc);
+        mNextMealCalories = view.findViewById(R.id.next_meal_calories);
+        mNoMoreFood = view.findViewById(R.id.no_more_food);
+
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity(), LinearLayoutManager.VERTICAL, false));
+        mRecyclerView.addItemDecoration(new DividerItemDecoration(getActivity(), DividerItemDecoration.VERTICAL));
+
+        mAdapter = new RecommendationsAdapter();
+        mRecyclerView.setAdapter(mAdapter);
 
         getDailyCalorieIntake();
 
@@ -78,7 +136,7 @@ public class RecommendationsFragment extends Fragment {
                 Log.d(TAG, "Number of buckets: " + dataReadResponse.getBuckets().size());
                 Log.d(TAG, "Number of datasets: " + dataReadResponse.getDataSets().size());
                 float avgCaloriesBurned = 0.0f;
-                boolean foundDataPoint = false;
+                boolean foundDataPoint;
                 cal.setTime(new Date());
                 for (int i = 1; i <= 4; i++) {
                     foundDataPoint = false;
@@ -116,10 +174,22 @@ public class RecommendationsFragment extends Fragment {
                 }
                 Log.d(TAG, "Average calories burned: " + avgCaloriesBurned);
 
-                int numPounds = -1;
-                int timePeriod = 7;
+                SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+                final int fitnessGoal = Integer.parseInt(sharedPref.getString("pref_fitness_goal", "0"));
+                int numPounds = sharedPref.getInt("pref_fitness_pounds", 0);
+                int timePeriod = sharedPref.getInt("pref_fitness_days", 0);
 
-                final float dailyCalories = ((numPounds * 3500) / timePeriod) + avgCaloriesBurned;
+                if (fitnessGoal == GOAL_WEIGHT_LOSS) {
+                    numPounds *= -1;
+                }
+
+                final float dailyCalories;
+                if (fitnessGoal == GOAL_MAINTAIN_WEIGHT) {
+                    dailyCalories = avgCaloriesBurned;
+                }
+                else {
+                    dailyCalories = ((numPounds * 3500) / timePeriod) + avgCaloriesBurned;
+                }
 
                 Log.d(TAG, "Number of calories to consume today: " + dailyCalories);
 
@@ -134,6 +204,7 @@ public class RecommendationsFragment extends Fragment {
                 DataReadRequest foodReadRequest = new DataReadRequest.Builder()
                         .read(DataType.TYPE_NUTRITION)
                         .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                        .enableServerQueries()
                         .build();
 
                 Fitness.getHistoryClient(getActivity(), GoogleSignIn.getLastSignedInAccount(getActivity()))
@@ -152,21 +223,145 @@ public class RecommendationsFragment extends Fragment {
                         cal.setTime(new Date());
                         int hour = cal.get(Calendar.HOUR_OF_DAY);
                         Log.d(TAG, "Hour of day: " + hour);
+                        final String searchQuery;
+                        final int mealType;
                         if (hour < 12) {
                             numMealsRemaining = 3;
+                            searchQuery = "breakfast";
+                            mealType = Field.MEAL_TYPE_BREAKFAST;
+                            mHeader.setText("Recommendations for breakfast");
+                            mNextMealCaloriesDesc.setText("Number of calories to consume for breakfast:");
                         }
                         else if (hour >= 12 && hour < 17) {
                             numMealsRemaining = 2;
+                            searchQuery = "lunch";
+                            mealType = Field.MEAL_TYPE_LUNCH;
+                            mHeader.setText("Recommendations for lunch");
+                            mNextMealCaloriesDesc.setText("Number of calories to consume for lunch:");
                         }
                         else {
                             numMealsRemaining = 1;
+                            searchQuery = "dinner";
+                            mealType = Field.MEAL_TYPE_LUNCH;
+                            mHeader.setText("Recommendations for dinner");
+                            mNextMealCaloriesDesc.setText("Number of calories to consume for dinner:");
                         }
 
                         Log.d(TAG, "Number of meals remaining: " + numMealsRemaining);
 
-                        float nextMealCalories = dailyCalories - numCaloriesConsumed / numMealsRemaining;
+                        final float nextMealCalories = (dailyCalories - numCaloriesConsumed) / numMealsRemaining;
 
                         Log.d(TAG, "Next meal calories: " + nextMealCalories);
+
+                        if (nextMealCalories > 0) {
+                            if (fitnessGoal == GOAL_MAINTAIN_WEIGHT) {
+                                mDailyCalories.setText(String.format(Locale.US, "About %.0f", dailyCalories));
+                                mNextMealCalories.setText(String.format(Locale.US, "About %.0f", nextMealCalories));
+                            }
+                            else if (fitnessGoal == GOAL_WEIGHT_GAIN) {
+                                mDailyCalories.setText(String.format(Locale.US, "At least %.0f", dailyCalories));
+                                mNextMealCalories.setText(String.format(Locale.US, "At least %.0f", nextMealCalories));
+                            }
+                            else if (fitnessGoal == GOAL_WEIGHT_LOSS) {
+                                mDailyCalories.setText(String.format(Locale.US, "At most %.0f", dailyCalories));
+                                mNextMealCalories.setText(String.format(Locale.US, "At most %.0f", nextMealCalories));
+                            }
+
+                            if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                mFusedLocationClient.getLastLocation()
+                                        .addOnSuccessListener(new OnSuccessListener<Location>() {
+                                            @Override
+                                            public void onSuccess(Location location) {
+                                                if (location != null) {
+                                                    Log.d(TAG, "Got location: " + location.getLatitude() + " " + location.getLongitude());
+                                                    try {
+                                                        PlacesSearchResult[] results = PlacesApi.nearbySearchQuery(mGeoApi, new LatLng(location.getLatitude(), location.getLongitude()))
+                                                                .rankby(RankBy.DISTANCE).keyword(searchQuery).await().results;
+
+                                                        Log.d(TAG, "Unique items");
+                                                        List<Restaurant> restaurants = new ArrayList<>();
+                                                        for (PlacesSearchResult result : results) {
+                                                            Restaurant restaurant = new Restaurant(result);
+                                                            if (!restaurants.contains(restaurant)) {
+                                                                restaurants.add(restaurant);
+                                                                Log.d(TAG, "ID: " + result.placeId + " Name: " + result.name);
+                                                            }
+                                                        }
+
+                                                        Collection<String> restaurantNames = CollectionUtils.collect(restaurants, new Transformer<Restaurant, String>() {
+                                                            @Override
+                                                            public String transform(Restaurant input) {
+                                                                return input.restaurant.name;
+                                                            }
+                                                        });
+
+                                                        FoodDbSearchParams params = new FoodDbSearchParams();
+                                                        params.restaurantNames = restaurantNames.toArray(new String[restaurantNames.size()]);
+                                                        params.mealType = mealType;
+                                                        params.calories = nextMealCalories;
+                                                        params.fitnessGoal = fitnessGoal;
+
+                                                        Retrofit retrofit = new Retrofit.Builder()
+                                                                .baseUrl("http://169.234.217.197:3000/")
+                                                                .addConverterFactory(GsonConverterFactory.create())
+                                                                .build();
+
+                                                        FoodDbApi service = retrofit.create(FoodDbApi.class);
+
+                                                        Call<List<MenuItem>> searchResults = service.search(params);
+                                                        searchResults.enqueue(new Callback<List<MenuItem>>() {
+                                                            @Override
+                                                            public void onResponse(Call<List<MenuItem>> call, Response<List<MenuItem>> response) {
+                                                                Log.d(TAG, "Got search results");
+                                                                List<MenuItem> menuItems = new ArrayList<>(response.body());
+                                                                Collections.sort(menuItems, new Comparator<MenuItem>() {
+                                                                    @Override
+                                                                    public int compare(MenuItem menuItem, MenuItem t1) {
+                                                                        if (menuItem.calories < t1.calories) {
+                                                                            return -1;
+                                                                        } else if (menuItem.calories > t1.calories) {
+                                                                            return 1;
+                                                                        } else {
+                                                                            return 0;
+                                                                        }
+                                                                    }
+                                                                });
+
+                                                                for (MenuItem menuItem : menuItems) {
+                                                                    Log.d(TAG, "Restaurant name: " + menuItem.restaurantName);
+                                                                    Log.d(TAG, "Item name: " + menuItem.itemName);
+                                                                    Log.d(TAG, "Item type: " + menuItem.itemType);
+                                                                    Log.d(TAG, "Calories: " + menuItem.calories);
+                                                                }
+
+                                                                mAdapter.setData(menuItems);
+
+                                                                mProgressBar.setVisibility(View.GONE);
+                                                                mContent.setVisibility(View.VISIBLE);
+                                                            }
+
+                                                            @Override
+                                                            public void onFailure(Call<List<MenuItem>> call, Throwable t) {
+                                                                Log.w(TAG, "Failed to get search results from Food DB");
+                                                                Log.w(TAG, t.getMessage());
+
+                                                                mProgressBar.setVisibility(View.GONE);
+                                                            }
+                                                        });
+
+                                                    } catch (Exception e) {
+                                                        e.printStackTrace();
+                                                    }
+                                                }
+                                            }
+                                        });
+                            }
+                        }
+                        else {
+                            Log.d(TAG, "No more food for today LOL :D");
+                            mProgressBar.setVisibility(View.GONE);
+                            mNoMoreFood.setVisibility(View.VISIBLE);
+                        }
                     }
                 });
             }
@@ -234,6 +429,25 @@ public class RecommendationsFragment extends Fragment {
             for (Field field : dp.getDataType().getFields()) {
                 Log.i(TAG, "\tField: " + field.getName() + " Value: " + dp.getValue(field));
             }
+        }
+    }
+
+    private class Restaurant {
+        PlacesSearchResult restaurant;
+
+        Restaurant(PlacesSearchResult restaurant) {
+            this.restaurant = restaurant;
+        }
+
+        @Override
+        public boolean equals(Object v) {
+            if (v instanceof Restaurant) {
+                Restaurant res = (Restaurant) v;
+                return this.restaurant != null && res.restaurant != null
+                        && this.restaurant.name.equals(res.restaurant.name);
+            }
+
+            return false;
         }
     }
 }

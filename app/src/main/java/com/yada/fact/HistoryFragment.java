@@ -130,6 +130,7 @@ public class HistoryFragment extends Fragment {
                 DataReadRequest readRequest1 = new DataReadRequest.Builder()
                         .read(DataType.TYPE_NUTRITION)
                         .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
+                        .enableServerQueries()
                         .build();
 
                 Fitness.getHistoryClient(getActivity(), GoogleSignIn.getLastSignedInAccount(getActivity()))

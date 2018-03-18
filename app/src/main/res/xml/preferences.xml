@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="Fitness Goal"
+        android:key="pref_key_fitness_goal_settings">
+
+        <ListPreference
+            android:key="pref_fitness_goal"
+            android:title="Fitness Goal"
+            android:dialogTitle="Fitness Goal"
+            android:entries="@array/pref_fitness_goal_entries"
+            android:entryValues="@array/pref_fitness_goal_values"
+            android:defaultValue="0"/>
+
+        <com.yada.fact.NumberPickerPreference
+            android:key="pref_fitness_pounds"
+            android:dependency="pref_fitness_goal"
+            android:title="Number of Pounds"
+            android:dialogTitle="Number of Pounds"
+            android:defaultValue="1"/>
+
+        <com.yada.fact.NumberPickerPreference
+            android:key="pref_fitness_days"
+            android:dependency="pref_fitness_goal"
+            android:title="Number of Days"
+            android:dialogTitle="Number of Days"
+            android:defaultValue="1"/>
+
+    </PreferenceCategory>
+</PreferenceScreen>
