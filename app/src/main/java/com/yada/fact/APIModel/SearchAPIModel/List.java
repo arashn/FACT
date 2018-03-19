@@ -16,6 +16,7 @@ public class List {
     private String  total;
     private String  group;
     private String  sort;
+
     private ArrayList<Item> item;
 
 
@@ -67,6 +68,10 @@ public class List {
 
     public String getSort() {
         return sort;
+    }
+
+    public ArrayList<Item> getItem() {
+        return item;
     }
 
 }

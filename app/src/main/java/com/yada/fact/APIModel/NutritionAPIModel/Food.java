@@ -7,14 +7,14 @@ import java.util.ArrayList;
  */
 
 public class Food {
-    private String ndbno;
+    private Integer ndbno;
     private String name;
     private String ds;
     private String manu;
     private String ru;
     private ArrayList<Nutrient> nutrients;
 
-    public Food(String ndbno, String name, String ds, String manu, String ru, ArrayList<Nutrient> nutrients) {
+    public Food(Integer ndbno, String name, String ds, String manu, String ru, ArrayList<Nutrient> nutrients) {
         this.ndbno = ndbno;
         this.name = name;
         this.ds = ds;
@@ -23,7 +23,7 @@ public class Food {
         this.nutrients = nutrients;
     }
 
-    public String getNdbno() {
+    public Integer getNdbno() {
         return ndbno;
     }
 

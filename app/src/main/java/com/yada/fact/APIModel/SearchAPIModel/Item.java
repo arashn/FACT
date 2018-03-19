@@ -8,10 +8,10 @@ public class Item {
     private String  offset;
     private String group;
     private String name;
-    private String ndbno;
+    private Integer ndbno;
     private String ds;
 
-    public Item(String offset, String group, String name, String ndbno, String ds) {
+    public Item(String offset, String group, String name, Integer ndbno, String ds) {
         this.offset = offset;
         this.group = group;
         this.name = name;
@@ -31,7 +31,7 @@ public class Item {
         return name;
     }
 
-    public String getNdbno() {
+    public Integer getNdbno() {
         return ndbno;
     }
 
