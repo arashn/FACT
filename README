@@ -1,0 +1,24 @@
+# FACT (Food and ACtivity Tracker)
+
+CS 225: Next Generation Search Systems
+
+Team Members:
+Dalal Alharthi
+Amari Lewis
+Arash Nabili
+Yadhu Prakash
+
+## Project Details
+Please refer to our final report for the details of the app.
+
+## Setup Notes
+If you would like to install the app, there is an APK provided in the root directory of the project.
+
+This project uses the Google Fit API. In order to use Google Fit, the app requires an OAuth 2.0 certificate. Currently, the app does not have an APK that is signed with a release certificate. This means that if you would like to compile the app for yourself, you will need to generate an OAuth 2.0 certificate with a debug key, as the debug app relies on keys specific to the machine where the app was compiled.
+
+Please follow these instructions in order to set up a Google Developers project and create an OAuth 2.0 certificate: https://developers.google.com/fit/android/get-api-key
+
+All you need to do is generate the certificate on the Google Developers console. You will not need to add anything to the project code in order to use the certificate.
+
+## Contact
+For help or more information, please contact Arash Nabili: anabili@uci.edu
