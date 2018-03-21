@@ -90,6 +90,12 @@
                 android:layout_height="wrap_content"
                 android:textSize="16sp"/>
         </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clear"/>
     </LinearLayout>
 
     <android.support.design.widget.FloatingActionButton

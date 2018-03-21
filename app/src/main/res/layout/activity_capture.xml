@@ -35,6 +35,18 @@
         android:hint="Dish Name"
         android:inputType="textPersonName" />
 
+    <Spinner
+        android:id="@+id/meal_type_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <EditText
+        android:id="@+id/meal_calories"
+        android:inputType="numberDecimal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Calories"/>
+
     <Button
         android:id="@+id/bt_add"
         android:layout_width="wrap_content"
@@ -42,32 +54,10 @@
         android:layout_gravity="end"
         android:text="Add" />
 
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:gravity="bottom"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/bn_return"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Cancel" />
-
-        <Button
-            android:id="@+id/bn_analyze"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Analyze" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/visionAPIData"
+    <Spinner
+        android:id="@+id/vision_spinner"
         android:layout_width="match_parent"
-        android:layout_height="105dp"
-        android:text="TextView" />
+        android:layout_height="wrap_content" />
 
 
 </LinearLayout>

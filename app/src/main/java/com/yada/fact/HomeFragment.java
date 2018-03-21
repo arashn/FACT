@@ -1,6 +1,7 @@
 package com.yada.fact;
 
 import android.app.Fragment;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -10,7 +11,9 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.fitness.Fitness;
@@ -20,6 +23,7 @@ import com.google.android.gms.fitness.data.DataSet;
 import com.google.android.gms.fitness.data.DataSource;
 import com.google.android.gms.fitness.data.DataType;
 import com.google.android.gms.fitness.data.Field;
+import com.google.android.gms.fitness.request.DataDeleteRequest;
 import com.google.android.gms.fitness.request.DataReadRequest;
 import com.google.android.gms.fitness.result.DataReadResponse;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -43,6 +47,7 @@ public class HomeFragment extends Fragment {
 
     private TextView mCaloriesBurned, mCaloriesToConsume, mCaloriesConsumed, mNextMealCaloriesDesc, mNextMealCalories;
     private FloatingActionButton mAddMealFab;
+    private Button mClearBtn;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -56,58 +61,37 @@ public class HomeFragment extends Fragment {
         mNextMealCaloriesDesc = view.findViewById(R.id.next_meal_calories_desc);
         mNextMealCalories = view.findViewById(R.id.next_meal_calories);
         mAddMealFab = view.findViewById(R.id.add_meal_fab);
+        mClearBtn = view.findViewById(R.id.btn_clear);
 
         mAddMealFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Log.d(TAG, "Adding banana and orange");
+                startActivity(new Intent(getActivity(), CaptureActivity.class));
+            }
+        });
+
+        mClearBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
                 Calendar cal = Calendar.getInstance();
                 cal.setTime(new Date());
-                long startTime = cal.getTimeInMillis();
-                cal.add(Calendar.MILLISECOND, 1);
                 long endTime = cal.getTimeInMillis();
-                DataSource nutritionSource = new DataSource.Builder()
-                        .setAppPackageName(getActivity())
-                        .setDataType(DataType.TYPE_NUTRITION)
-                        .setType(DataSource.TYPE_RAW)
+                cal.set(Calendar.HOUR_OF_DAY, 0);
+                cal.set(Calendar.MINUTE, 0);
+                cal.set(Calendar.SECOND, 0);
+                cal.set(Calendar.MILLISECOND, 0);
+                long startTime = cal.getTimeInMillis();
+
+                DataDeleteRequest request =
+                        new DataDeleteRequest.Builder()
+                        .setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS)
+                        .addDataType(DataType.TYPE_NUTRITION)
                         .build();
 
-                DataPoint banana = DataPoint.create(nutritionSource);
-                banana.setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);
-                banana.getValue(Field.FIELD_FOOD_ITEM).setString("banana");
-                banana.getValue(Field.FIELD_MEAL_TYPE).setInt(Field.MEAL_TYPE_SNACK);
-                banana.getValue(Field.FIELD_NUTRIENTS).setKeyValue(Field.NUTRIENT_CALORIES, 105f);
-
-                cal.add(Calendar.MILLISECOND, 1);
-                startTime = cal.getTimeInMillis();
-                cal.add(Calendar.MILLISECOND, 1);
-                endTime = cal.getTimeInMillis();
-
-                DataPoint orange = DataPoint.create(nutritionSource);
-                orange.setTimeInterval(startTime, endTime, TimeUnit.MILLISECONDS);
-                orange.getValue(Field.FIELD_FOOD_ITEM).setString("orange");
-                orange.getValue(Field.FIELD_MEAL_TYPE).setInt(Field.MEAL_TYPE_SNACK);
-                orange.getValue(Field.FIELD_NUTRIENTS).setKeyValue(Field.NUTRIENT_CALORIES, 45f);
-
-                DataSet dataSet = DataSet.create(nutritionSource);
-                dataSet.add(banana);
-                dataSet.add(orange);
-
                 Fitness.getHistoryClient(getActivity(), GoogleSignIn.getLastSignedInAccount(getActivity()))
-                        .insertData(dataSet).addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.d(TAG, "Successfully added banana");
-                    }
-                }).addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.e(TAG, "Failed to add banana");
-                        Log.d(TAG, e.getMessage());
-                    }
-                });
+                        .deleteData(request);
 
-                //startActivity(new Intent(getActivity(), CaptureActivity.class));
+                Toast.makeText(getActivity(), "Food log data cleared", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -265,7 +249,7 @@ public class HomeFragment extends Fragment {
 
                         Log.d(TAG, "Number of meals remaining: " + numMealsRemaining);
 
-                        final float nextMealCalories = (dailyCalories - numCaloriesConsumed) / numMealsRemaining;
+                        float nextMealCalories = Math.max((dailyCalories / numMealsRemaining) - numCaloriesConsumed, 0.0f);
 
                         Log.d(TAG, "Next meal calories: " + nextMealCalories);
                         if (fitnessGoal == GOAL_MAINTAIN_WEIGHT) {

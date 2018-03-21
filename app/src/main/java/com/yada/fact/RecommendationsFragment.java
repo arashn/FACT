@@ -255,7 +255,7 @@ public class RecommendationsFragment extends Fragment {
 
                         Log.d(TAG, "Number of meals remaining: " + numMealsRemaining);
 
-                        final float nextMealCalories = (dailyCalories - numCaloriesConsumed) / numMealsRemaining;
+                        final float nextMealCalories = Math.max((dailyCalories / numMealsRemaining) - numCaloriesConsumed, 0.0f);
 
                         Log.d(TAG, "Next meal calories: " + nextMealCalories);
 
@@ -367,7 +367,7 @@ public class RecommendationsFragment extends Fragment {
                             }
                         }
                         else {
-                            Log.d(TAG, "No more food for today LOL :D");
+                            Log.d(TAG, "No more food for now LOL :D");
                             mProgressBar.setVisibility(View.GONE);
                             mContent.setVisibility(View.GONE);
                             mNoMoreFood.setVisibility(View.VISIBLE);
