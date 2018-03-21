@@ -60,6 +60,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class RecommendationsFragment extends Fragment {
     private static final String TAG = "RecommendationsFragment";
 
+    private static final String FOOD_BASE_URL = "http://169.234.29.69:3000/";
+
     public static final int GOAL_MAINTAIN_WEIGHT = 0;
     public static final int GOAL_WEIGHT_GAIN = 1;
     public static final int GOAL_WEIGHT_LOSS = 2;
@@ -96,12 +98,16 @@ public class RecommendationsFragment extends Fragment {
         mAdapter = new RecommendationsAdapter();
         mRecyclerView.setAdapter(mAdapter);
 
-        getDailyCalorieIntake();
+        getNextMealRecommendation();
 
         return view;
     }
 
-    private void getDailyCalorieIntake() {
+    private void getNextMealRecommendation() {
+        mProgressBar.setVisibility(View.VISIBLE);
+        mContent.setVisibility(View.GONE);
+        mNoMoreFood.setVisibility(View.GONE);
+
         final Calendar cal = Calendar.getInstance();
         Date now = new Date();
         cal.setTime(now);
@@ -176,8 +182,8 @@ public class RecommendationsFragment extends Fragment {
 
                 SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
                 final int fitnessGoal = Integer.parseInt(sharedPref.getString("pref_fitness_goal", "0"));
-                int numPounds = sharedPref.getInt("pref_fitness_pounds", 0);
-                int timePeriod = sharedPref.getInt("pref_fitness_days", 0);
+                int numPounds = sharedPref.getInt("pref_fitness_pounds", 1);
+                int timePeriod = sharedPref.getInt("pref_fitness_days", 1);
 
                 if (fitnessGoal == GOAL_WEIGHT_LOSS) {
                     numPounds *= -1;
@@ -302,7 +308,7 @@ public class RecommendationsFragment extends Fragment {
                                                         params.fitnessGoal = fitnessGoal;
 
                                                         Retrofit retrofit = new Retrofit.Builder()
-                                                                .baseUrl("http://169.234.217.197:3000/")
+                                                                .baseUrl(FOOD_BASE_URL)
                                                                 .addConverterFactory(GsonConverterFactory.create())
                                                                 .build();
 
@@ -338,6 +344,7 @@ public class RecommendationsFragment extends Fragment {
 
                                                                 mProgressBar.setVisibility(View.GONE);
                                                                 mContent.setVisibility(View.VISIBLE);
+                                                                mNoMoreFood.setVisibility(View.GONE);
                                                             }
 
                                                             @Override
@@ -346,6 +353,8 @@ public class RecommendationsFragment extends Fragment {
                                                                 Log.w(TAG, t.getMessage());
 
                                                                 mProgressBar.setVisibility(View.GONE);
+                                                                mContent.setVisibility(View.GONE);
+                                                                mNoMoreFood.setVisibility(View.GONE);
                                                             }
                                                         });
 
@@ -360,6 +369,7 @@ public class RecommendationsFragment extends Fragment {
                         else {
                             Log.d(TAG, "No more food for today LOL :D");
                             mProgressBar.setVisibility(View.GONE);
+                            mContent.setVisibility(View.GONE);
                             mNoMoreFood.setVisibility(View.VISIBLE);
                         }
                     }

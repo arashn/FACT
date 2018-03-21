@@ -202,8 +202,8 @@ public class HomeFragment extends Fragment {
 
                 SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
                 final int fitnessGoal = Integer.parseInt(sharedPref.getString("pref_fitness_goal", "0"));
-                int numPounds = sharedPref.getInt("pref_fitness_pounds", 0);
-                int timePeriod = sharedPref.getInt("pref_fitness_days", 0);
+                int numPounds = sharedPref.getInt("pref_fitness_pounds", 1);
+                int timePeriod = sharedPref.getInt("pref_fitness_days", 1);
 
                 if (fitnessGoal == GOAL_WEIGHT_LOSS) {
                     numPounds *= -1;

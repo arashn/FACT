@@ -12,7 +12,7 @@ import android.widget.NumberPicker;
 
 public class NumberPickerPreference extends DialogPreference {
     private static final String TAG = "NumPickerPref";
-    private static final int DEFAULT_VALUE = 0;
+    private static final int DEFAULT_VALUE = 1;
 
     private NumberPicker mNumberPicker;
     private int mCurrentValue, mNewValue;
